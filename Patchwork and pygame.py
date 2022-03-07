@@ -302,7 +302,7 @@ if __name__ == '__main__':
         board.render()
         if filling_cells:
             for cell in board.filled_cells:
-                pygame.draw.rect(screen, (64, 128, 255), cell)
+                pygame.draw.rect(screen, (65, 128, 255), cell)
         # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index % 10].image, all_tiles[index % 10].rect)
         # all_sprites.draw(screen)
