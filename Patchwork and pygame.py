@@ -230,9 +230,9 @@ class Board:
         # если мы нажали на кнопку согласия на постановку тайла
         if self.condition:
             # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоардъ)
-            if self.board.check_tile(*cell, self.tiles_list[index]):
+            if self.board.check_tile(*cell, self.tiles_list[index][0]):
                 # закрашиваем
-                self.board.place_tile(*cell, self.tiles_list[index])
+                self.board.place_tile(*cell, self.tiles_list[index][0])
                 for y in range(len(self.board.board_list)):
                     for x in range(y):
                         if self.board.board_list[y][x]:
