@@ -182,10 +182,10 @@ class Board:
         # кнопка, при нажатии на которую мы переходи в режим выставления детальки на поле
         pygame.draw.rect(screen, (94, 148, 118), (415, 170, 30, 30))
 
-    def get_click(self, mouse_pos, index):
+    def get_click(self, mouse_pos, index, screen):
         cell = self.get_cell(mouse_pos)
         if cell:
-            self.on_click(cell, index)
+            self.on_click(cell, index, screen)
         elif self.check_button_rot(mouse_pos):
             self.rotate_tile()
         elif self.check_button_next(mouse_pos):
@@ -225,7 +225,7 @@ class Board:
             return True
         return False
 
-    def on_click(self, cell, index):
+    def on_click(self, cell, index, screen):
         print(cell)
         # если мы нажали на кнопку согласия на постановку тайла
         if self.condition:
@@ -236,7 +236,7 @@ class Board:
                 for y in range(len(self.board.board_list)):
                     for x in range(y):
                         if self.board.board_list[y][x]:
-                            self.fill_cell((x, y))
+                            self.fill_cell((x, y), screen)
 
     def rotate_tile(self):
         pass
@@ -247,7 +247,7 @@ class Board:
     def waiting_for_position(self):
         self.condition = True
 
-    def fill_cell(self, cell):
+    def fill_cell(self, cell, screen):
         x, y = cell
         pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
 
@@ -289,7 +289,7 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                f = board.get_click(event.pos, index)
+                f = board.get_click(event.pos, index, screen)
                 if f:
                     index += 1
 
