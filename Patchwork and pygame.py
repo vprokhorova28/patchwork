@@ -158,13 +158,14 @@ class Board:
         self.color = 0
         self.tiles_list = tiles_list  # нампаевские тайлы
         self.condition = False  # отвечает за то, можно ли ставить тайл
+        self.filled_cells = []
 
     def set_view(self, left, top, cell_size):
         self.left = left
         self.top = top
         self.cell_size = cell_size
 
-    def render(self, screen):
+    def render(self):
         x, y, s = self.left, self.top, self.cell_size
         for i in self.board.board_list:
             for j in i:
@@ -234,9 +235,9 @@ class Board:
                 # закрашиваем
                 self.board.place_tile(*cell, self.tiles_list[index][0])
                 for y in range(len(self.board.board_list)):
-                    for x in range(y):
+                    for x in range(len(self.board.board_list[y])):
                         if self.board.board_list[y][x]:
-                            self.fill_cell((x, y))
+                            self.add_filled_cell((x, y))
 
     def rotate_tile(self):
         pass
@@ -247,9 +248,12 @@ class Board:
     def waiting_for_position(self):
         self.condition = True
 
-    def fill_cell(self, cell):
+    def add_filled_cell(self, cell):
+        global filling_cells
         x, y = cell
-        pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
+        filled_cell = pygame.Rect(10 + x * 30, 10 + y * 30, 30, 30)
+        self.filled_cells.append(filled_cell)
+        filling_cells = True
 
 
 class TilesSprites(pygame.sprite.Sprite):
@@ -283,6 +287,7 @@ if __name__ == '__main__':
         all_tiles.append(TilesSprites(tile[0], tile[1]))
     index = 0
 
+    filling_cells = False
     running = True
     while running:
         for event in pygame.event.get():
@@ -294,7 +299,10 @@ if __name__ == '__main__':
                     index += 1
 
         screen.fill((0, 0, 0))
-        board.render(screen)
+        board.render()
+        if filling_cells:
+            for cell in board.filled_cells:
+                pygame.draw.rect(screen, (64, 128, 255), cell)
         # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index % 10].image, all_tiles[index % 10].rect)
         # all_sprites.draw(screen)
