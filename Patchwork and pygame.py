@@ -137,14 +137,40 @@ class QuiltBoard:
 
 class TimeLine:
     def __init__(self):
+        self.num_cells = 54
+        self.button_income_coords = [5, 11, 17, 23, 29, 35, 41, 47, 53]
+        self.special_patch_coords = [20, 26, 32, 44, 50]
+
+    def move(self):
         pass
+
+    def has_new_buttons(self):
+        pass
+
+    def add_new_buttons(self):
+        pass
+
+    def has_new_special_patches(self):
+        pass
+
+    def add_new_special_patches(self):
+        pass
+
+    def is_game_finished(self):
+        pass
+
+    def who_moves(self):
+        pass
+
 
 
 class Player:
     def __init__(self):
-        self.bonus = 0
+        self.board = 0
+        self.bonus7x7 = 0
+        self.button_income = 0 # кол-во пуговиц на поле
         self.money = 0
-        self.tiles = []
+        self.special_patches = 0
 
 
 class Board:
@@ -173,6 +199,14 @@ class Board:
                 x += s
             x = self.left
             y += s
+
+        for i in self.board.board_list:
+            for j in i:
+                pygame.draw.rect(screen, (255, 255, 255), (x, y+30, s, s), 1)
+                x += s
+            x = self.left
+            y += s
+
         # рисуем окошко, где будут показываться детальки
         pygame.draw.rect(screen, (255, 255, 255), (323, 8, 154, 154), 2)
         # к нему кнопку, которая должна пролистывать детальки, это спрайт
@@ -251,7 +285,7 @@ class Board:
     def add_filled_cell(self, cell):
         global filling_cells
         x, y = cell
-        filled_cell = pygame.Rect(10 + x * 30, 10 + y * 30, 30, 30)
+        filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30, 28, 28)
         self.filled_cells.append(filled_cell)
         filling_cells = True
 
@@ -302,7 +336,7 @@ if __name__ == '__main__':
         board.render()
         if filling_cells:
             for cell in board.filled_cells:
-                pygame.draw.rect(screen, (65, 128, 255), cell)
+                pygame.draw.rect(screen, (74, 172, 214), cell)
         # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index % 10].image, all_tiles[index % 10].rect)
         # all_sprites.draw(screen)
