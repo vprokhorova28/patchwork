@@ -113,7 +113,7 @@ class QuiltBoard:
         где x и y - координаты левого верхнего угла
         '''
         tile_height, tile_width = len(tile), len(tile[0])
-        if (tile_height + y >= 9) or (tile_width + x >= 9):
+        if (tile_height + y > 9) or (tile_width + x > 9):
             return False
         empty_field_with_tile = numpy.zeros((9, 9), dtype=int)
         empty_field_with_tile[y:(y + tile_height), x:(x + tile_width)] = tile
