@@ -105,7 +105,8 @@ class QuiltBoard:
         ]
 
     def check_7x7(self):
-        pass
+        field_7x7 = numpy.zeros((7, 7), dtype=int)
+        return None
 
     def check_tile(self, x, y, tile):
         '''
@@ -113,7 +114,7 @@ class QuiltBoard:
         где x и y - координаты левого верхнего угла
         '''
         tile_height, tile_width = len(tile), len(tile[0])
-        if (tile_height + y >= 9) or (tile_width + x >= 9):
+        if (tile_height + y > 9) or (tile_width + x > 9):
             return False
         empty_field_with_tile = numpy.zeros((9, 9), dtype=int)
         empty_field_with_tile[y:(y + tile_height), x:(x + tile_width)] = tile
@@ -137,14 +138,40 @@ class QuiltBoard:
 
 class TimeLine:
     def __init__(self):
+        self.num_cells = 54
+        self.button_income_coords = [5, 11, 17, 23, 29, 35, 41, 47, 53]
+        self.special_patch_coords = [20, 26, 32, 44, 50]
+
+    def move(self):
         pass
+
+    def has_new_buttons(self):
+        pass
+
+    def add_new_buttons(self):
+        pass
+
+    def has_new_special_patches(self):
+        pass
+
+    def add_new_special_patches(self):
+        pass
+
+    def is_game_finished(self):
+        pass
+
+    def who_moves(self):
+        pass
+
 
 
 class Player:
     def __init__(self):
-        self.bonus = 0
+        self.board = 0
+        self.bonus7x7 = 0
+        self.button_income = 0 # кол-во пуговиц на поле
         self.money = 0
-        self.tiles = []
+        self.special_patches = 0
 
 
 class Board:
@@ -158,13 +185,18 @@ class Board:
         self.color = 0
         self.tiles_list = tiles_list  # нампаевские тайлы
         self.condition = False  # отвечает за то, можно ли ставить тайл
+        self.filled_cells = []
+        # хотелось бы, чтобы после того, как мы ставим детальку, больше мы не могли её достать
+        # для этого нужно удалить её из списка, но нам всё равно нужен индекс. Проблема: индекс
+        # индекс лежит не в классе, менять
+        self.dif_index = 0
 
     def set_view(self, left, top, cell_size):
         self.left = left
         self.top = top
         self.cell_size = cell_size
 
-    def render(self, screen):
+    def render(self):
         x, y, s = self.left, self.top, self.cell_size
         for i in self.board.board_list:
             for j in i:
@@ -172,6 +204,14 @@ class Board:
                 x += s
             x = self.left
             y += s
+
+        for i in self.board.board_list:
+            for j in i:
+                pygame.draw.rect(screen, (255, 255, 255), (x, y+30, s, s), 1)
+                x += s
+            x = self.left
+            y += s
+
         # рисуем окошко, где будут показываться детальки
         pygame.draw.rect(screen, (255, 255, 255), (323, 8, 154, 154), 2)
         # к нему кнопку, которая должна пролистывать детальки, это спрайт
@@ -182,10 +222,10 @@ class Board:
         # кнопка, при нажатии на которую мы переходи в режим выставления детальки на поле
         pygame.draw.rect(screen, (94, 148, 118), (415, 170, 30, 30))
 
-    def get_click(self, mouse_pos, index, screen):
+    def get_click(self, mouse_pos):
         cell = self.get_cell(mouse_pos)
         if cell:
-            self.on_click(cell, index, screen)
+            self.on_click(cell)
         elif self.check_button_rot(mouse_pos):
             self.rotate_tile()
         elif self.check_button_next(mouse_pos):
@@ -197,8 +237,10 @@ class Board:
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
         if x < self.left or x > self.left + self.width * self.cell_size:
+            print(1)
             return None
         if y < self.top or y > self.top + self.height * self.cell_size:
+            print(2)
             return None
         x_num = (x - self.left) // self.cell_size
         y_num = (y - self.top) // self.cell_size
@@ -225,19 +267,23 @@ class Board:
             return True
         return False
 
-    def on_click(self, cell, index, screen):
+    def on_click(self, cell):
+        global index, all_tiles
         print(cell)
         # если мы нажали на кнопку согласия на постановку тайла
         if self.condition:
-            # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоардъ)
+            # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоард)
             if self.board.check_tile(*cell, self.tiles_list[index][0]):
                 # закрашиваем
                 self.board.place_tile(*cell, self.tiles_list[index][0])
                 for y in range(len(self.board.board_list)):
-                    for x in range(y):
+                    for x in range(len(self.board.board_list[y])):
                         if self.board.board_list[y][x]:
-                            pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
-
+                            self.add_filled_cell((x, y))
+                self.condition = False
+                self.tiles_list.pop(index)
+                all_tiles.pop(index)
+                index -= 1
     def rotate_tile(self):
         pass
 
@@ -247,9 +293,12 @@ class Board:
     def waiting_for_position(self):
         self.condition = True
 
-    # def fill_cell(self, cell, screen):
-    #     x, y = cell
-    #     pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
+    def add_filled_cell(self, cell):
+        global filling_cells
+        x, y = cell
+        filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30, 28, 28)
+        self.filled_cells.append(filled_cell)
+        filling_cells = True
 
 
 class TilesSprites(pygame.sprite.Sprite):
@@ -283,21 +332,24 @@ if __name__ == '__main__':
         all_tiles.append(TilesSprites(tile[0], tile[1]))
     index = 0
 
+    filling_cells = False
     running = True
     while running:
-        screen.fill((0, 0, 0))
-        board.render(screen)
-        screen.blit(all_tiles[index % 10].image, all_tiles[index % 10].rect)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                f = board.get_click(event.pos, index, screen)
+                f = board.get_click(event.pos)
                 if f:
                     index += 1
-
+        index %= len(all_tiles)
+        screen.fill((0, 0, 0))
+        board.render()
+        if filling_cells:
+            for cell in board.filled_cells:
+                pygame.draw.rect(screen, (74, 172, 214), cell)
         # нужно отрисовывать один тайл, а не все сразу
-
+        screen.blit(all_tiles[index].image, all_tiles[index].rect)
         # all_sprites.draw(screen)
 
         pygame.display.flip()
