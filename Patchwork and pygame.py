@@ -166,31 +166,28 @@ class QuiltBoard:
 
 
 class TimeLine:
-    def __init__(self):
+    def __init__(self, player1, player2):
         self.num_cells = 54
         self.button_income_coords = [5, 11, 17, 23, 29, 35, 41, 47, 53]
         self.special_patch_coords = [20, 26, 32, 44, 50]
-
-    def move(self):
-        pass
-
-    def has_new_buttons(self):
-        pass
-
-    def add_new_buttons(self):
-        pass
-
-    def has_new_special_patches(self):
-        pass
-
-    def add_new_special_patches(self):
-        pass
+        self.board = [] * 54
+        self.player1 = player1
+        self.player2 = player2
 
     def is_game_finished(self):
-        pass
+        if self.player1.timeline_position == 53 and self.player2.timeline_position == 53:
+            return True
+        return False
 
     def who_moves(self):
-        pass
+        if self.player1.timeline_position > self.player2.timeline_position:
+            return self.player1
+        if self.player1.timeline_position < self.player2.timeline_position:
+            return self.player2
+        else:
+            # возвращает первого игрока, добавленного в список определенной клетки поля
+            return self.board[self.player2.timeline_position][-1]
+
 
 
 class Board:
@@ -218,15 +215,17 @@ class Board:
 
     def render(self):
         x, y, s = self.left, self.top, self.cell_size
+        # рисуем первый QuiltBoard
         for i in self.qb1.board_list:
-            for j in i:
+            for _ in i:
                 pygame.draw.rect(screen, (255, 255, 255), (x, y, s, s), 1)
                 x += s
             x = self.left
             y += s
 
-        for i in self.qb1.board_list:
-            for j in i:
+        # рисуем второй QuiltBoard
+        for i in self.qb2.board_list:
+            for _ in i:
                 pygame.draw.rect(screen, (255, 255, 255), (x, y + 30, s, s), 1)
                 x += s
             x = self.left
@@ -326,11 +325,30 @@ class Board:
 class Player:
     def __init__(self, quiltboard):
         self.quiltboard = quiltboard
-        self.bonus_7x7 = False
+        self.bonus_7x7 = 0
         self.button_income = 0  # кол-во пуговиц на поле
         self.money = 5
         self.special_patches = 0 # кажется, их нужно сразу ставить
         self.timeline_position = 0
+
+    def move(self, move_num):
+        if self.timeline_position + move_num <= 53:
+            self.timeline_position += move_num
+        else:
+            self.timeline_position = 53
+
+    def has_new_buttons(self):
+        pass
+
+    def add_new_buttons(self):
+        pass
+
+    def has_new_special_patches(self):
+        pass
+
+    def add_new_special_patches(self):
+        pass
+
 
 
 
@@ -380,6 +398,8 @@ if __name__ == '__main__':
     # создаём объект с лоскутным одеялом
     board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb1, qb2)
     board.set_view(10, 10, 30)
+
+    timeline = TimeLine(player1, player2)
 
     index = 0
     image_configuration = 0
