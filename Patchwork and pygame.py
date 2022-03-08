@@ -236,7 +236,7 @@ class Board:
                 for y in range(len(self.board.board_list)):
                     for x in range(y):
                         if self.board.board_list[y][x]:
-                            self.fill_cell((x, y), screen)
+                            pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
 
     def rotate_tile(self):
         pass
@@ -247,9 +247,9 @@ class Board:
     def waiting_for_position(self):
         self.condition = True
 
-    def fill_cell(self, cell, screen):
-        x, y = cell
-        pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
+    # def fill_cell(self, cell, screen):
+    #     x, y = cell
+    #     pygame.draw.rect(screen, (244, 196, 8), (10 + x * 30, 10 + y * 30, 30, 30))
 
 
 class TilesSprites(pygame.sprite.Sprite):
@@ -285,6 +285,9 @@ if __name__ == '__main__':
 
     running = True
     while running:
+        screen.fill((0, 0, 0))
+        board.render(screen)
+        screen.blit(all_tiles[index % 10].image, all_tiles[index % 10].rect)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -293,10 +296,8 @@ if __name__ == '__main__':
                 if f:
                     index += 1
 
-        screen.fill((0, 0, 0))
-        board.render(screen)
         # нужно отрисовывать один тайл, а не все сразу
-        screen.blit(all_tiles[index % 10].image, all_tiles[index % 10].rect)
+
         # all_sprites.draw(screen)
 
         pygame.display.flip()
