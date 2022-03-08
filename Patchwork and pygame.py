@@ -47,47 +47,52 @@ tile_10 = numpy.array([
 
 ])
 
-tiles_list = [(tile_1, 'tile_1.bmp'), (tile_2, 'tile_2.bmp'), (tile_3, 'tile_3.bmp'),
-              (tile_4, 'tile_4.bmp'), (tile_5, 'tile_5.bmp'), (tile_6, 'tile_6.bmp'),
-              (tile_7, 'tile_7.bmp'), (tile_8, 'tile_8.bmp'), (tile_9, 'tile_9.bmp'),
-              (tile_10, 'tile_10.bmp')]
-
 
 class Tile:
     '''цена, время, базовые конфигурации'''
 
-    def __init__(self, price, time_taken, basic_configuration):
+    def __init__(self, price, time_taken, basic_configuration, images):
         self.price = price
         self.time_taken = time_taken
-        self.basic_configuration = basic_configuration
+        self.basic_configuration = Shape(basic_configuration)
+        self.images = images
 
-    def get_all_configurations(self):
-        configurations = [self.basic_configuration]
-        configurations.append(self.basic_configuration.rotated_90)
-        configurations.append(self.basic_configuration.rotated_180)
-        configurations.append(self.basic_configuration.rotated_90.rotated_180)
-        configurations.append(self.basic_configuration.mirrored)
-        configurations.append(self.basic_configuration.mirrored.rotated_90)
-        configurations.append(self.basic_configuration.mirrored.rotated_180)
-        configurations.append(self.basic_configuration.mirrored.rotated_90.rotated_180)
+    @property
+    def all_configurations(self):
+        configurations = []
+        configurations.append(self.basic_configuration.rotated_90(0))
+        configurations.append(self.basic_configuration.rotated_90(1))
+        configurations.append(self.basic_configuration.rotated_90(2))
+        configurations.append(self.basic_configuration.rotated_90(3))
+        # configurations.append(self.basic_configuration.mirrored)
+        # configurations.append(self.basic_configuration.mirrored.rotated_90)
+        # configurations.append(self.basic_configuration.mirrored.rotated_180)
+        # configurations.append(self.basic_configuration.mirrored.rotated_90.rotated_180)
         return configurations
 
 
 class Shape:
     '''Генератор всех возможных шейпов'''
 
-    def __init__(self, tile, cost):  # tile типа numpy.array
+    def __init__(self, tile):  # tile типа numpy.array
         self.shape = tile
-        self.cost = cost
 
     def mirrored(self):
         return numpy.flip(self.shape, axis=1)
 
-    def rotated_90(self):
-        return numpy.rot90(self.shape)
+    def rotated_90(self, n):
+        return numpy.rot90(self.shape, n)
 
-    def rotated_180(self):
-        return numpy.rot90(self.shape, 2)
+    @property
+    def height(self):
+        return len(self.shape)
+
+    @property
+    def width(self):
+        if self.height == 0:
+            return 0
+        else:
+            return len(self.shape[0])
 
 
 class QuiltBoard:
@@ -108,24 +113,26 @@ class QuiltBoard:
         field_7x7 = numpy.zeros((7, 7), dtype=int)
         return None
 
-    def check_tile(self, x, y, tile):
+    def check_tile(self, x, y, tiles):
         '''
         проверка, можно ли поставить тайл в координаты x, y,
         где x и y - координаты левого верхнего угла
         '''
-        tile_height, tile_width = len(tile), len(tile[0])
+        global image_configuration
+        tile_height, tile_width = len(tiles[image_configuration]), len(tiles[image_configuration][0])
         if (tile_height + y > 9) or (tile_width + x > 9):
             return False
         empty_field_with_tile = numpy.zeros((9, 9), dtype=int)
-        empty_field_with_tile[y:(y + tile_height), x:(x + tile_width)] = tile
+        empty_field_with_tile[y:(y + tile_height), x:(x + tile_width)] = tiles[image_configuration]
         return numpy.all(empty_field_with_tile & self.board_list == 0)
 
-    def place_tile(self, x, y, tile):
+    def place_tile(self, x, y, tiles):
         '''
         перед вызовом метода нужно проверить, можно ли вставить тайл
         x и y - координаты верхнего левого угла
         '''
-        for index_i, i in enumerate(tile):
+        global image_configuration
+        for index_i, i in enumerate(tiles[image_configuration]):
             for index_j, j in enumerate(i):
                 self.board_list[y + index_i][x + index_j] += j
 
@@ -164,12 +171,11 @@ class TimeLine:
         pass
 
 
-
 class Player:
     def __init__(self):
         self.board = 0
         self.bonus7x7 = 0
-        self.button_income = 0 # кол-во пуговиц на поле
+        self.button_income = 0  # кол-во пуговиц на поле
         self.money = 0
         self.special_patches = 0
 
@@ -183,7 +189,8 @@ class Board:
         self.top = 20
         self.cell_size = 50
         self.color = 0
-        self.tiles_list = tiles_list  # нампаевские тайлы
+
+        self.tiles_list = tiles_list  # список из объектов класса Tile
         self.condition = False  # отвечает за то, можно ли ставить тайл
         self.filled_cells = []
         # хотелось бы, чтобы после того, как мы ставим детальку, больше мы не могли её достать
@@ -207,7 +214,7 @@ class Board:
 
         for i in self.board.board_list:
             for j in i:
-                pygame.draw.rect(screen, (255, 255, 255), (x, y+30, s, s), 1)
+                pygame.draw.rect(screen, (255, 255, 255), (x, y + 30, s, s), 1)
                 x += s
             x = self.left
             y += s
@@ -228,19 +235,20 @@ class Board:
             self.on_click(cell)
         elif self.check_button_rot(mouse_pos):
             self.rotate_tile()
+            return 'rot'
         elif self.check_button_next(mouse_pos):
             self.do_next()
-            return True
+            return 'next'
         elif self.check_button_set(mouse_pos):
             self.waiting_for_position()
 
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
         if x < self.left or x > self.left + self.width * self.cell_size:
-            print(1)
+            # print(1)
             return None
         if y < self.top or y > self.top + self.height * self.cell_size:
-            print(2)
+            # print(2)
             return None
         x_num = (x - self.left) // self.cell_size
         y_num = (y - self.top) // self.cell_size
@@ -273,9 +281,9 @@ class Board:
         # если мы нажали на кнопку согласия на постановку тайла
         if self.condition:
             # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоард)
-            if self.board.check_tile(*cell, self.tiles_list[index][0]):
+            if self.board.check_tile(*cell, self.tiles_list[index].all_configurations):
                 # закрашиваем
-                self.board.place_tile(*cell, self.tiles_list[index][0])
+                self.board.place_tile(*cell, self.tiles_list[index].all_configurations)
                 for y in range(len(self.board.board_list)):
                     for x in range(len(self.board.board_list[y])):
                         if self.board.board_list[y][x]:
@@ -284,6 +292,7 @@ class Board:
                 self.tiles_list.pop(index)
                 all_tiles.pop(index)
                 index -= 1
+
     def rotate_tile(self):
         pass
 
@@ -303,6 +312,7 @@ class Board:
 
 class TilesSprites(pygame.sprite.Sprite):
     '''создаём спрайты для кнопок'''
+
     def __init__(self, tile, path):
         pygame.sprite.Sprite.__init__(self)
         player_img = pygame.image.load(path).convert()
@@ -316,6 +326,19 @@ class TilesSprites(pygame.sprite.Sprite):
         pass
 
 
+tiles_list = [
+    Tile(4, 2, tile_1, ['tile_1.bmp', 'tile_1_rot90.bmp', 'tile_1_rot180.bmp', 'tile_1_rot270.bmp']),
+    Tile(10, 3, tile_2, ['tile_2.bmp', 'tile_2_rot90.bmp', 'tile_2_rot180.bmp', 'tile_2_rot270.bmp']),
+    Tile(1, 3, tile_3, ['tile_3.bmp', 'tile_3_rot90.bmp', 'tile_3_rot180.bmp', 'tile_3_rot270.bmp']),
+    Tile(10, 5, tile_4, ['tile_4.bmp', 'tile_4_rot90.bmp', 'tile_4_rot180.bmp', 'tile_4_rot270.bmp']),
+    Tile(7, 1, tile_5, ['tile_5.bmp', 'tile_5_rot90.bmp', 'tile_5_rot180.bmp', 'tile_5_rot270.bmp']),
+    Tile(10, 3, tile_6, ['tile_6.bmp', 'tile_6_rot90.bmp', 'tile_6_rot180.bmp', 'tile_6_rot270.bmp']),
+    Tile(7, 2, tile_7, ['tile_7.bmp', 'tile_7_rot90.bmp', 'tile_7_rot180.bmp', 'tile_7_rot270.bmp']),
+    Tile(6, 5, tile_8, ['tile_8.bmp', 'tile_8_rot90.bmp', 'tile_8_rot180.bmp', 'tile_8_rot270.bmp']),
+    Tile(10, 4, tile_9, ['tile_9.bmp', 'tile_9_rot90.bmp', 'tile_9_rot180.bmp', 'tile_9_rot270.bmp']),
+    Tile(1, 4, tile_10, ['tile_10.bmp', 'tile_10_rot90.bmp', 'tile_10_rot180.bmp', 'tile_10_rot270.bmp'])
+]
+
 if __name__ == '__main__':
     pygame.init()
     size = width, height = 700, 600
@@ -324,13 +347,8 @@ if __name__ == '__main__':
     board = Board(9, 9, tiles_list)
     board.set_view(10, 10, 30)
 
-    # Делаем кнопки
-    all_sprites = pygame.sprite.Group()
-    all_tiles = []
-    for tile in tiles_list:
-        all_sprites.add(TilesSprites(tile[0], tile[1]))
-        all_tiles.append(TilesSprites(tile[0], tile[1]))
     index = 0
+    image_configuration = 0
 
     filling_cells = False
     running = True
@@ -340,9 +358,23 @@ if __name__ == '__main__':
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 f = board.get_click(event.pos)
-                if f:
+                if f == 'next':
                     index += 1
+                if f == 'rot':
+                    image_configuration += 1
+
+        image_configuration %= 4
+
+        # Делаем кнопки
+        all_sprites = pygame.sprite.Group()
+        all_tiles = []
+        for tile in tiles_list:
+            # all_sprites.add(TilesSprites(tile.basic_configuration, tile.images[0]))
+            all_tiles.append(
+                TilesSprites(tile.all_configurations[image_configuration], tile.images[image_configuration]))
+
         index %= len(all_tiles)
+
         screen.fill((0, 0, 0))
         board.render()
         if filling_cells:
