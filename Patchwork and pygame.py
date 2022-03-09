@@ -405,6 +405,9 @@ tiles_list = [
     Tile(1, 4, 1, tile_10, ['tile_10.bmp', 'tile_10_rot90.bmp', 'tile_10_rot180.bmp', 'tile_10_rot270.bmp']),
     Tile(5, 4, 2, tile_11, ['tile_11.bmp', 'tile_11_rot90.bmp', 'tile_11_rot180.bmp', 'tile_11_rot270.bmp']),
     Tile(2, 1, 0, tile_12, ['tile_12.bmp', 'tile_12_rot90.bmp', 'tile_12_rot180.bmp', 'tile_12_rot270.bmp']),
+    Tile(7, 4, 2, tile_13, ['tile_13.bmp', 'tile_13_rot90.bmp', 'tile_13_rot180.bmp', 'tile_13_rot270.bmp']),
+    Tile(1, 5, 1, tile_14, ['tile_14.bmp', 'tile_14_rot90.bmp', 'tile_14_rot180.bmp', 'tile_14_rot270.bmp']),
+    Tile(1, 2, 0, tile_15, ['tile_15.bmp', 'tile_15_rot90.bmp', 'tile_15_rot180.bmp', 'tile_15_rot270.bmp'])
 ]
 
 if __name__ == '__main__':
