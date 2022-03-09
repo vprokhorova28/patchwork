@@ -1,7 +1,5 @@
 import pygame
 import numpy
-import os
-from random import choice
 
 BOARD_HEIGHT = 9
 BOARD_WIDTH = 9
@@ -132,8 +130,8 @@ class Shape:
             return len(self.shape[0])
 
 
-class QuiltBoard:
-    def __init__(self):
+class QuiltBoard():
+    def __init__(self, player):
         self.board_list = numpy.array([
             [0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -145,8 +143,8 @@ class QuiltBoard:
             [0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0]
         ])
-        self.is_bonus_7x7_received = False
         self.bonus_coords = None
+        self.player = player
 
     def check_7x7(self):
         for y in range(BOARD_HEIGHT - 7 + 1):
@@ -170,24 +168,80 @@ class QuiltBoard:
         empty_field_with_tile[y:(y + tile_height), x:(x + tile_width)] = tiles[image_configuration]
         return numpy.all(empty_field_with_tile & self.board_list == 0)
 
-    def place_tile(self, x, y, tiles):
+    def place_tile(self, x, y, tile):
         '''
         перед вызовом метода нужно проверить, можно ли вставить тайл
         x и y - координаты верхнего левого угла
         '''
-        global image_configuration, qb_received_7x7
-        for index_i, i in enumerate(tiles[image_configuration]):
+        global image_configuration, player_received_7x7, move_number
+        for index_i, i in enumerate(tile.all_configurations[image_configuration]):
             for index_j, j in enumerate(i):
                 self.board_list[y + index_i][x + index_j] += j
-        if not qb_received_7x7:
-            if self.check_7x7():
-                self.is_bonus_7x7_received = True
-                qb_received_7x7 = self
+        player_latest_position = self.player.timeline_position
+        self.player.move(move_num=tile.placing_time)
+        self.player.use_money(value=tile.placing_price)
+        self.player.increase_income(tile.button_income)
+        move_number += 1
 
+        nearest_button_position = None
+        nearest_patch_position = None
+
+        for btn in timeline.button_income_coords:
+            if btn > player_latest_position:
+                nearest_button_position = btn
+                break
+
+        for patch in timeline.special_patch_coords:
+            if patch > player_latest_position:
+                nearest_button_position = patch
+                break
+
+        if nearest_button_position:
+            if self.player.is_money_increased(nearest_btn=nearest_button_position):
+                self.player.add_money()
+
+        if nearest_patch_position:
+            if self.player.has_new_special_patches(nearest_patch=nearest_patch_position):
+                pass  # не придумала я еще, что делать в этом случае
+
+        if not player_received_7x7:
+            if self.check_7x7():
+                self.player.bonus_7x7 = True
+                player_received_7x7 = self.player
 
     @property
     def empties_num(self):
         return BOARD_WIDTH*BOARD_HEIGHT - sum([sum(line) for line in self.board_list])
+
+
+class Player:
+    def __init__(self):
+        self.bonus_7x7 = False
+        self.button_income = 0  # кол-во пуговиц на поле
+        self.money = 5
+        self.special_patches = 0 # кажется, их нужно сразу ставить
+        self.timeline_position = 0
+
+    def move(self, move_num):
+        if self.timeline_position + move_num <= 53:
+            self.timeline_position += move_num
+        else:
+            self.timeline_position = 53
+
+    def use_money(self, value):
+        self.money -= value
+
+    def add_money(self, value):
+        self.money += value
+
+    def is_money_increased(self, nearest_btn):
+        return nearest_btn <= self.timeline_position
+
+    def increase_income(self, value):
+        self.button_income += value
+
+    def has_new_special_patches(self, nearest_patch):
+        return nearest_patch <= self.timeline_position
 
 
 class TimeLine:
@@ -214,15 +268,14 @@ class TimeLine:
             return self.board[self.player2.timeline_position][-1]
 
 
-
 class Board:
-    def __init__(self, width, height, tiles_list, qb1, dif):
+    def __init__(self, width, height, tiles_list, qb, dif):
         self.width = width
         self.height = height
         self.left = 20
         self.top = 20
         self.cell_size = 50
-        self.qb1 = qb1
+        self.qb = qb
         self.dif = dif
 
         self.tiles_list = tiles_list  # список из объектов класса Tile
@@ -241,7 +294,7 @@ class Board:
     def render(self):
         x, y, s = self.left, self.top + self.dif, self.cell_size
         # рисуем первый QuiltBoard
-        for i in self.qb1.board_list:
+        for i in self.qb.board_list:
             for _ in i:
                 pygame.draw.rect(screen, (255, 255, 255), (x, y, s, s), 1)
                 x += s
@@ -319,12 +372,12 @@ class Board:
         # если мы нажали на кнопку согласия на постановку тайла
         if self.condition:
             # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоард)
-            if self.qb1.check_tile(*cell, self.tiles_list[index].all_configurations):
+            if self.qb.check_tile(*cell, self.tiles_list[index].all_configurations):
                 # закрашиваем
-                self.qb1.place_tile(*cell, self.tiles_list[index].all_configurations)
-                for y in range(len(self.qb1.board_list)):
-                    for x in range(len(self.qb1.board_list[y])):
-                        if self.qb1.board_list[y][x]:
+                self.qb.place_tile(*cell, self.tiles_list[index])
+                for y in range(len(self.qb.board_list)):
+                    for x in range(len(self.qb.board_list[y])):
+                        if self.qb.board_list[y][x]:
                             self.add_filled_cell((x, y))
                 self.condition = False
                 self.tiles_list.pop(index)
@@ -346,34 +399,6 @@ class Board:
         filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30 + self.dif, 28, 28)
         self.filled_cells.append(filled_cell)
         filling_cells = True
-
-
-class Player:
-    def __init__(self, quiltboard):
-        self.quiltboard = quiltboard
-        self.bonus_7x7 = 0
-        self.button_income = 0  # кол-во пуговиц на поле
-        self.money = 5
-        self.special_patches = 0 # кажется, их нужно сразу ставить
-        self.timeline_position = 0
-
-    def move(self, move_num):
-        if self.timeline_position + move_num <= 53:
-            self.timeline_position += move_num
-        else:
-            self.timeline_position = 53
-
-    def has_new_buttons(self):
-        pass
-
-    def add_new_buttons(self):
-        pass
-
-    def has_new_special_patches(self):
-        pass
-
-    def add_new_special_patches(self):
-        pass
 
 
 class TilesSprites(pygame.sprite.Sprite):
@@ -415,13 +440,14 @@ if __name__ == '__main__':
     size = width, height = 700, 600
     screen = pygame.display.set_mode(size)
 
-    qb1 = QuiltBoard()
-    qb2 = QuiltBoard()
+    player1 = Player()
+    player2 = Player()
 
-    player1 = Player(qb1)
-    player2 = Player(qb2)
+    qb1 = QuiltBoard(player1)
+    qb2 = QuiltBoard(player2)
 
-    qb_received_7x7 = None
+    player_received_7x7 = None
+    move_number = 0
 
     # создаём объект с лоскутным одеялом
     board_1 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb1, 0)
@@ -469,8 +495,8 @@ if __name__ == '__main__':
                 pygame.draw.rect(screen, GREEN, cell)
             for cell in board_2.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
-        if qb_received_7x7 is not None:
-            bonus_x, bonus_y = qb_received_7x7.bonus_coords
+        if player_received_7x7 is not None:
+            bonus_x, bonus_y = player_received_7x7.bonus_coords
             for y in range(7):
                 for x in range(7):
                     pygame.draw.rect(screen, PURPLE,
