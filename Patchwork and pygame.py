@@ -191,14 +191,14 @@ class TimeLine:
 
 
 class Board:
-    def __init__(self, width, height, tiles_list, qb1, qb2):
+    def __init__(self, width, height, tiles_list, qb1, dif):
         self.width = width
         self.height = height
         self.left = 20
         self.top = 20
         self.cell_size = 50
         self.qb1 = qb1
-        self.qb2 = qb2
+        self.dif = dif
 
         self.tiles_list = tiles_list  # список из объектов класса Tile
         self.condition = False  # отвечает за то, можно ли ставить тайл
@@ -214,7 +214,7 @@ class Board:
         self.cell_size = cell_size
 
     def render(self):
-        x, y, s = self.left, self.top, self.cell_size
+        x, y, s = self.left, self.top + self.dif, self.cell_size
         # рисуем первый QuiltBoard
         for i in self.qb1.board_list:
             for _ in i:
@@ -223,13 +223,13 @@ class Board:
             x = self.left
             y += s
 
-        # рисуем второй QuiltBoard
-        for i in self.qb2.board_list:
-            for _ in i:
-                pygame.draw.rect(screen, (255, 255, 255), (x, y + 30, s, s), 1)
-                x += s
-            x = self.left
-            y += s
+        # # рисуем второй QuiltBoard
+        # for i in self.qb2.board_list:
+        #     for _ in i:
+        #         pygame.draw.rect(screen, (255, 255, 255), (x, y + 30, s, s), 1)
+        #         x += s
+        #     x = self.left
+        #     y += s
 
         # рисуем окошко, где будут показываться детальки
         pygame.draw.rect(screen, (255, 255, 255), (323, 8, 154, 154), 2)
@@ -256,14 +256,15 @@ class Board:
 
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
+        is_board2 = False
         if x < self.left or x > self.left + self.width * self.cell_size:
             # print(1)
             return None
-        if y < self.top or y > self.top + self.height * self.cell_size:
+        if y < self.top + self.dif or y > self.top + self.height * self.cell_size + self.dif:
             # print(2)
             return None
         x_num = (x - self.left) // self.cell_size
-        y_num = (y - self.top) // self.cell_size
+        y_num = (y - self.top - self.dif) // self.cell_size
         return (x_num, y_num)
 
     def check_button_rot(self, mouse_pos):
@@ -317,7 +318,7 @@ class Board:
     def add_filled_cell(self, cell):
         global filling_cells
         x, y = cell
-        filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30, 28, 28)
+        filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30 + self.dif, 28, 28)
         self.filled_cells.append(filled_cell)
         filling_cells = True
 
@@ -396,8 +397,10 @@ if __name__ == '__main__':
     qb_received_7x7 = None
 
     # создаём объект с лоскутным одеялом
-    board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb1, qb2)
-    board.set_view(10, 10, 30)
+    board_1 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb1, 0)
+    board_1.set_view(10, 10, 30)
+    board_2 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb2, 300)
+    board_2.set_view(10, 10, 30)
 
     timeline = TimeLine(player1, player2)
 
@@ -411,11 +414,12 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                f = board.get_click(event.pos)
-                if f == 'next':
+                f1 = board_1.get_click(event.pos)
+                if f1 == 'next':
                     index += 1
-                if f == 'rot':
+                if f1 == 'rot':
                     image_configuration += 1
+                f2 = board_2.get_click(event.pos)
 
         image_configuration %= CONFIG_NUM
 
@@ -431,9 +435,12 @@ if __name__ == '__main__':
             index %= len(all_tiles)
 
         screen.fill((0, 0, 0))
-        board.render()
+        board_1.render()
+        board_2.render()
         if filling_cells:
-            for cell in board.filled_cells:
+            for cell in board_1.filled_cells:
+                pygame.draw.rect(screen, GREEN, cell)
+            for cell in board_2.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
         if qb_received_7x7 is not None:
             bonus_x, bonus_y = qb_received_7x7.bonus_coords
