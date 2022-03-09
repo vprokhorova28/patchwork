@@ -10,7 +10,7 @@ CONFIG_NUM = 4
 BLUE = (74, 172, 214)
 GREEN = (94, 148, 118)
 PURPLE = (74, 55, 97)
-RED = (0, 0, 0)
+RED = (123, 69, 90)
 
 tile_1 = numpy.array([
     [0, 0, 1],
@@ -57,6 +57,31 @@ tile_10 = numpy.array([
 
 ])
 
+tile_11 = numpy.array([  # 5 4 2
+    [0, 1, 0],
+    [1, 1, 1],
+    [0, 1, 0]
+])
+
+tile_12 = numpy.array([  # 2 1 0
+    [1, 1]
+])
+
+tile_13 = numpy.array([  # 7 4 2
+    [0, 1, 1, 0],
+    [1, 1, 1, 1]
+])
+
+tile_14 = numpy.array([  # 1 5 1
+    [1, 0, 0, 1],
+    [1, 1, 1, 1]
+])
+
+tile_15 = numpy.array([  # 1, 2, 0
+    [1, 1],
+    [1, 0],
+    [1, 1]
+])
 
 class Tile:
     '''цена, время, базовые конфигурации'''
@@ -349,9 +374,6 @@ class Player:
 
     def add_new_special_patches(self):
         pass
-
-
-
 
 
 class TilesSprites(pygame.sprite.Sprite):
