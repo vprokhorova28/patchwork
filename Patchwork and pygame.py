@@ -1,5 +1,8 @@
-import pygame
+from typing import Any
+
 import numpy
+import pygame
+from pygame.sprite import AbstractGroup
 
 BOARD_HEIGHT = 9
 BOARD_WIDTH = 9
@@ -75,11 +78,12 @@ tile_14 = numpy.array([  # 1 5 1
     [1, 1, 1, 1]
 ])
 
-tile_15 = numpy.array([  # 1, 2, 0
+tile_15 = numpy.array([  # 1 2 0
     [1, 1],
     [1, 0],
     [1, 1]
 ])
+
 
 class Tile:
     '''цена, время, базовые конфигурации'''
@@ -90,7 +94,6 @@ class Tile:
         self.placing_time = placing_time
         self.placing_price = placing_price
         self.button_income = button_income
-
 
     @property
     def all_configurations(self):
@@ -150,7 +153,7 @@ class QuiltBoard():
         for y in range(BOARD_HEIGHT - 7 + 1):
             for x in range(BOARD_WIDTH - 7 + 1):
                 field_7x7 = numpy.ones((7, 7), dtype=int)
-                if numpy.all(field_7x7 & self.board_list[y:y+7, x:x+7]):
+                if numpy.all(field_7x7 & self.board_list[y:y + 7, x:x + 7]):
                     self.bonus_coords = (x, y)
                     return True
         return False
@@ -211,7 +214,7 @@ class QuiltBoard():
 
     @property
     def empties_num(self):
-        return BOARD_WIDTH*BOARD_HEIGHT - sum([sum(line) for line in self.board_list])
+        return BOARD_WIDTH * BOARD_HEIGHT - sum([sum(line) for line in self.board_list])
 
 
 class Player:
@@ -219,7 +222,7 @@ class Player:
         self.bonus_7x7 = False
         self.button_income = 0  # кол-во пуговиц на поле
         self.money = 5
-        self.special_patches = 0 # кажется, их нужно сразу ставить
+        self.special_patches = 0  # кажется, их нужно сразу ставить
         self.timeline_position = 0
 
     def move(self, move_num):
@@ -266,6 +269,11 @@ class TimeLine:
         else:
             # возвращает первого игрока, добавленного в список определенной клетки поля
             return self.board[self.player2.timeline_position][-1]
+
+
+class TimeTocken():
+    def __init__(self, pos):
+        self.pos = pos
 
 
 class Board:
@@ -417,6 +425,22 @@ class TilesSprites(pygame.sprite.Sprite):
         pass
 
 
+class TimelineSprite(pygame.sprite.Sprite):
+
+    def __init__(self):
+        pygame.sprite.Sprite.__init__(self)
+        player_img = pygame.image.load('timeline.bmp').convert()
+        self.image = player_img
+        self.image.set_colorkey((255, 255, 255))
+        self.rect = self.image.get_rect()
+        self.rect.center = (505, 405)
+
+
+
+
+# special_patch_code = numpy.array([1])
+# special_patch = Tile(0, 0, 0, special_patch_code, #тут должна быть картинка)
+
 tiles_list = [
     Tile(4, 2, 1, tile_1, ['tile_1.bmp', 'tile_1_rot90.bmp', 'tile_1_rot180.bmp', 'tile_1_rot270.bmp']),
     Tile(10, 3, 0, tile_2, ['tile_2.bmp', 'tile_2_rot90.bmp', 'tile_2_rot180.bmp', 'tile_2_rot270.bmp']),
@@ -477,6 +501,7 @@ if __name__ == '__main__':
         image_configuration %= CONFIG_NUM
 
         # Делаем кнопки
+        timeline_sprite = TimelineSprite()
         all_sprites = pygame.sprite.Group()
         all_tiles = []
         for tile in tiles_list:
@@ -503,6 +528,7 @@ if __name__ == '__main__':
                                      (11 + (x + bonus_x) * 30, 11 + (y + bonus_y) * 30, 28, 28))
         # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index].image, all_tiles[index].rect)
+        screen.blit(timeline_sprite.image, timeline_sprite.rect)
         # all_sprites.draw(screen)
 
         pygame.display.flip()
