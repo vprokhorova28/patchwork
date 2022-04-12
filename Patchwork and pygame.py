@@ -1,8 +1,5 @@
-from typing import Any
-
 import numpy
 import pygame
-from pygame.sprite import AbstractGroup
 
 BOARD_HEIGHT = 9
 BOARD_WIDTH = 9
@@ -12,6 +9,7 @@ BLUE = (74, 172, 214)
 GREEN = (94, 148, 118)
 PURPLE = (74, 55, 97)
 RED = (123, 69, 90)
+WHITE = (255, 255, 255)
 
 tile_1 = numpy.array([
     [0, 0, 1],
@@ -57,32 +55,54 @@ tile_10 = numpy.array([
     [0, 0, 1, 0, 0]
 
 ])
-
 tile_11 = numpy.array([  # 5 4 2
     [0, 1, 0],
     [1, 1, 1],
     [0, 1, 0]
 ])
-
 tile_12 = numpy.array([  # 2 1 0
     [1, 1]
 ])
-
 tile_13 = numpy.array([  # 7 4 2
     [0, 1, 1, 0],
     [1, 1, 1, 1]
 ])
-
 tile_14 = numpy.array([  # 1 5 1
-    [1, 0, 0, 1],
-    [1, 1, 1, 1]
+    [1, 1],
+    [1, 0],
+    [1, 0],
+    [1, 1]
 ])
-
 tile_15 = numpy.array([  # 1 2 0
     [1, 1],
     [1, 0],
     [1, 1]
 ])
+
+
+class Button:
+    def __init__(self, screen, x, y, length, width, color, text):
+        self.x = x
+        self.y = y
+        self.screen = screen
+        self.length = length
+        self.width = width
+        self.text = text
+        self.color = color
+        self.rect = pygame.Rect(x, y, length, width)
+
+    def draw(self):
+        pygame.draw.rect(self.screen, self.color, (self.x, self.y, self.length, self.width))
+        font_size = int(self.length// len(self.text))*2
+        myFont = pygame.font.SysFont("Calibri", font_size)
+        myText = myFont.render(self.text, True, WHITE)
+        self.screen.blit(myText, ((self.x + self.length / 2) - myText.get_width() / 2, (self.y + self.width / 2) - myText.get_height() / 2))
+
+    def is_pressed(self, mouse):
+        if self.rect.topleft[0] < mouse[0] < self.rect.bottomright[0] and self.rect.topleft[1] < mouse[1] < \
+                self.rect.bottomright[1]:
+                        return True
+        return False
 
 
 class Tile:
@@ -134,20 +154,40 @@ class Shape:
 
 
 class QuiltBoard():
-    def __init__(self, player):
-        self.board_list = numpy.array([
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        ])
+    def __init__(self, player, width, height, left, top, dif, cell_size):
+        self.width = width
+        self.height = height
+        self.left = left
+        self.top = top
+        self.dif = dif
+        self.cell_size = cell_size
+        self.filled_cells = []
+        self.board_list = numpy.zeros((BOARD_HEIGHT, BOARD_WIDTH), dtype=int)
         self.bonus_coords = None
         self.player = player
+
+    def render(self):
+        x, y, s = self.left, self.top + self.dif, self.cell_size
+        for i in self.board_list:
+            for _ in i:
+                pygame.draw.rect(screen, (255, 255, 255), (x, y, s, s), 1)
+                x += s
+            x = self.left
+            y += s
+
+    def get_cell(self, mouse_pos):
+        x, y = mouse_pos
+        is_board2 = False
+        if x < self.left or x > self.left + self.width * self.cell_size:
+            # print(1)
+            return None
+        if y < self.top + self.dif or y > self.top + self.height * self.cell_size + self.dif:
+            # print(2)
+            return None
+        x_num = (x - self.left) // self.cell_size
+        y_num = (y - self.top - self.dif) // self.cell_size
+        return (x_num, y_num)
+
 
     def check_7x7(self):
         for y in range(BOARD_HEIGHT - 7 + 1):
@@ -157,6 +197,13 @@ class QuiltBoard():
                     self.bonus_coords = (x, y)
                     return True
         return False
+
+    def add_filled_cell(self, cell):
+        global filling_cells
+        x, y = cell
+        filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30 + self.dif, 28, 28)
+        self.filled_cells.append(filled_cell)
+        filling_cells = True
 
     def check_tile(self, x, y, tiles):
         '''
@@ -218,12 +265,13 @@ class QuiltBoard():
 
 
 class Player:
-    def __init__(self):
+    def __init__(self, token):
         self.bonus_7x7 = False
         self.button_income = 0  # кол-во пуговиц на поле
         self.money = 5
         self.special_patches = 0  # кажется, их нужно сразу ставить
         self.timeline_position = 0
+        self.token = token
 
     def move(self, move_num):
         if self.timeline_position + move_num <= 53:
@@ -271,51 +319,31 @@ class TimeLine:
             return self.board[self.player2.timeline_position][-1]
 
 
-class TimeTocken():
-    def __init__(self, pos):
-        self.pos = pos
+class TimeToken():
+    def __init__(self):
+        self.pos = 0
 
 
 class Board:
-    def __init__(self, width, height, tiles_list, qb, dif):
+    def __init__(self, width, height, tiles_list, qb, btn_place):
         self.width = width
         self.height = height
         self.left = 20
         self.top = 20
         self.cell_size = 50
-        self.qb = qb
-        self.dif = dif
+        self.quiltboards = qb
 
         self.tiles_list = tiles_list  # список из объектов класса Tile
         self.condition = False  # отвечает за то, можно ли ставить тайл
-        self.filled_cells = []
+        self.btn_place = btn_place
         # хотелось бы, чтобы после того, как мы ставим детальку, больше мы не могли её достать
         # для этого нужно удалить её из списка, но нам всё равно нужен индекс. Проблема: индекс
         # индекс лежит не в классе, менять
         self.dif_index = 0
 
-    def set_view(self, left, top, cell_size):
-        self.left = left
-        self.top = top
-        self.cell_size = cell_size
-
     def render(self):
-        x, y, s = self.left, self.top + self.dif, self.cell_size
-        # рисуем первый QuiltBoard
-        for i in self.qb.board_list:
-            for _ in i:
-                pygame.draw.rect(screen, (255, 255, 255), (x, y, s, s), 1)
-                x += s
-            x = self.left
-            y += s
-
-        # # рисуем второй QuiltBoard
-        # for i in self.qb2.board_list:
-        #     for _ in i:
-        #         pygame.draw.rect(screen, (255, 255, 255), (x, y + 30, s, s), 1)
-        #         x += s
-        #     x = self.left
-        #     y += s
+        for qb in self.quiltboards:
+            qb.render()
 
         # рисуем окошко, где будут показываться детальки
         pygame.draw.rect(screen, (255, 255, 255), (323, 8, 154, 154), 2)
@@ -328,9 +356,12 @@ class Board:
         pygame.draw.rect(screen, GREEN, (415, 170, 30, 30))
 
     def get_click(self, mouse_pos):
-        cell = self.get_cell(mouse_pos)
-        if cell:
-            self.on_click(cell)
+        cell1 = self.quiltboards[0].get_cell(mouse_pos)
+        cell2 = self.quiltboards[1].get_cell(mouse_pos)
+        if cell1:
+            self.on_click(cell1, 1)
+        elif cell2:
+            self.on_click(cell2, 2)
         elif self.check_button_rot(mouse_pos):
             self.rotate_tile()
             return 'rot'
@@ -339,19 +370,10 @@ class Board:
             return 'next'
         elif self.check_button_set(mouse_pos):
             self.waiting_for_position()
-
-    def get_cell(self, mouse_pos):
-        x, y = mouse_pos
-        is_board2 = False
-        if x < self.left or x > self.left + self.width * self.cell_size:
-            # print(1)
-            return None
-        if y < self.top + self.dif or y > self.top + self.height * self.cell_size + self.dif:
-            # print(2)
-            return None
-        x_num = (x - self.left) // self.cell_size
-        y_num = (y - self.top - self.dif) // self.cell_size
-        return (x_num, y_num)
+        elif self.btn_place.is_pressed(mouse_pos):
+            print('поставить')
+        elif self.btn_advance.os_pressed(mouse_pos):
+            pass
 
     def check_button_rot(self, mouse_pos):
         x, y = mouse_pos
@@ -374,19 +396,19 @@ class Board:
             return True
         return False
 
-    def on_click(self, cell):
+    def on_click(self, cell, qb_number):
         global index, all_tiles
         print(cell)
         # если мы нажали на кнопку согласия на постановку тайла
         if self.condition:
             # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоард)
-            if self.qb.check_tile(*cell, self.tiles_list[index].all_configurations):
+            if self.quiltboards[qb_number-1].check_tile(*cell, self.tiles_list[index].all_configurations):
                 # закрашиваем
-                self.qb.place_tile(*cell, self.tiles_list[index])
-                for y in range(len(self.qb.board_list)):
-                    for x in range(len(self.qb.board_list[y])):
-                        if self.qb.board_list[y][x]:
-                            self.add_filled_cell((x, y))
+                self.quiltboards[qb_number-1].place_tile(*cell, self.tiles_list[index])
+                for y in range(len(self.quiltboards[qb_number-1].board_list)):
+                    for x in range(len(self.quiltboards[qb_number-1].board_list[y])):
+                        if self.quiltboards[qb_number-1].board_list[y][x]:
+                            self.quiltboards[qb_number-1].add_filled_cell((x, y))
                 self.condition = False
                 self.tiles_list.pop(index)
                 all_tiles.pop(index)
@@ -400,13 +422,6 @@ class Board:
 
     def waiting_for_position(self):
         self.condition = True
-
-    def add_filled_cell(self, cell):
-        global filling_cells
-        x, y = cell
-        filled_cell = pygame.Rect(11 + x * 30, 11 + y * 30 + self.dif, 28, 28)
-        self.filled_cells.append(filled_cell)
-        filling_cells = True
 
 
 class TilesSprites(pygame.sprite.Sprite):
@@ -429,13 +444,11 @@ class TimelineSprite(pygame.sprite.Sprite):
 
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        player_img = pygame.image.load('timeline.bmp').convert()
+        player_img = pygame.image.load('TimeLine.bmp').convert()
         self.image = player_img
         self.image.set_colorkey((255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.center = (505, 405)
-
-
 
 
 # special_patch_code = numpy.array([1])
@@ -464,20 +477,27 @@ if __name__ == '__main__':
     size = width, height = 700, 600
     screen = pygame.display.set_mode(size)
 
-    player1 = Player()
-    player2 = Player()
+    token1 = TimeToken()
+    token2 = TimeToken()
 
-    qb1 = QuiltBoard(player1)
-    qb2 = QuiltBoard(player2)
+    player1 = Player(token1)
+    player2 = Player(token2)
+
+    btn_place = Button(screen, 500, 60, 100, 40, RED, 'take and place a patch')
+
+    qb1 = QuiltBoard(player1, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=0)
+    qb2 = QuiltBoard(player2, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=300)
+
+    board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, [qb1, qb2], btn_place)
 
     player_received_7x7 = None
     move_number = 0
 
     # создаём объект с лоскутным одеялом
-    board_1 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb1, 0)
-    board_1.set_view(10, 10, 30)
-    board_2 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb2, 300)
-    board_2.set_view(10, 10, 30)
+    # board_1 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb1, 0)
+    # board_1.set_view(10, 10, 30)
+    # board_2 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb2, 300)
+    # board_2.set_view(10, 10, 30)
 
     timeline = TimeLine(player1, player2)
 
@@ -491,12 +511,11 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
-                f1 = board_1.get_click(event.pos)
+                f1 = board.get_click(event.pos)
                 if f1 == 'next':
                     index += 1
                 if f1 == 'rot':
                     image_configuration += 1
-                f2 = board_2.get_click(event.pos)
 
         image_configuration %= CONFIG_NUM
 
@@ -513,12 +532,13 @@ if __name__ == '__main__':
             index %= len(all_tiles)
 
         screen.fill((0, 0, 0))
-        board_1.render()
-        board_2.render()
+
+        board.render()
+        btn_place.draw()
         if filling_cells:
-            for cell in board_1.filled_cells:
+            for cell in qb1.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
-            for cell in board_2.filled_cells:
+            for cell in qb2.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
         if player_received_7x7 is not None:
             bonus_x, bonus_y = player_received_7x7.bonus_coords
