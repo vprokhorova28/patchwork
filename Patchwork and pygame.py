@@ -524,6 +524,9 @@ if __name__ == '__main__':
 
     token1 = TimeToken('жетон 1.bmp', 1)
     token2 = TimeToken('жетон 2.bmp', 2)
+    tokens_sprites_list = pygame.sprite.Group()
+    tokens_sprites_list.add(token1)
+    tokens_sprites_list.add(token2)
 
     player1 = Player(token1)
     player2 = Player(token2)
@@ -546,8 +549,6 @@ if __name__ == '__main__':
     # board_1.set_view(10, 10, 30)
     # board_2 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb2, 300)
     # board_2.set_view(10, 10, 30)
-
-
 
     index = 0
     image_configuration = 0
@@ -599,8 +600,9 @@ if __name__ == '__main__':
         # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index].image, all_tiles[index].rect)
         screen.blit(timeline_sprite.image, timeline_sprite.rect)
-        screen.blit(token2.image, timeline_sprite.rect)
-        screen.blit(token1.image, timeline_sprite.rect)
+        # screen.blit(token2.image, timeline_sprite.rect)
+        # screen.blit(token1.image, timeline_sprite.rect)
+        tokens_sprites_list.draw(screen)
 
         # all_sprites.draw(screen)
 
