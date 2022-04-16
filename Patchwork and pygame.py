@@ -355,6 +355,7 @@ class Board:
         self.dif_index = 0
 
     def render(self):
+        global index, player1, player2
         for qb in self.quiltboards:
             qb.render()
 
@@ -364,14 +365,22 @@ class Board:
         # нет, блин, кола
         pygame.draw.rect(screen, PURPLE, (325, 170, 30, 30))
         # которая поворачивает детальку
-        pygame.draw.rect(screen, BLUE, (370, 170, 30, 30))
-        # кнопка, при нажатии на которую мы переходи в режим выставления детальки на поле
-        pygame.draw.rect(screen, GREEN, (415, 170, 30, 30))
+        pygame.draw.rect(screen, BLUE, (445, 170, 30, 30))
+        # окно с данными лоскутка
+        pygame.draw.rect(screen, WHITE, (360, 170, 80, 30), 2)
+        myFont = pygame.font.SysFont("Courier New", 14, bold=True)
+        myText = myFont.render(
+            f'П:{self.tiles_list[index].placing_price} В:{self.tiles_list[index].placing_time}',
+            True, WHITE)
+        screen.blit(myText, (365, 175))
         # окошки для игроков, у кого сколько пуговиц
         pygame.draw.rect(screen, (255, 255, 255), (490, 10, 95, 100), 2)
+        myText = myFont.render(f'{player1.money} пуговиц', True, WHITE)
+        screen.blit(myText, (495, 15))
         pygame.draw.rect(screen, (255, 255, 255), (585, 10, 95, 100), 2)
+        myText = myFont.render(f'{player2.money} пуговиц', True, WHITE)
+        screen.blit(myText, (590, 15))
 
-        myFont = pygame.font.SysFont("Courier New", 18)
         myText = myFont.render(f'Ход {timeline.who_moves.token.number}го игрока', True, WHITE)
         screen.blit(myText, (490, 120))
 
@@ -388,12 +397,16 @@ class Board:
         elif self.check_button_next(mouse_pos):
             self.do_next()
             return 'next'
-        elif self.check_button_set(mouse_pos):
-            self.waiting_for_position()
         elif self.btn_A.is_pressed(mouse_pos):
-            print('поставить')
-        elif self.btn_B.os_pressed(mouse_pos):
-            pass
+            print('передвинуться по таймлайну и получить пуговицы')
+        elif self.btn_B.is_pressed(mouse_pos):
+            print('потратить пуговицы и расположить лоскут')
+            player = timeline.who_moves
+            player.timeline_position += self.tiles_list[index].placing_time
+            player.token.rect.center = timeline.cells_centers[player.timeline_position]
+            print(timeline.cells_centers[
+                player.timeline_position + self.tiles_list[index].placing_time])
+            self.waiting_for_position()
 
     def check_button_rot(self, mouse_pos):
         x, y = mouse_pos
@@ -404,17 +417,17 @@ class Board:
 
     def check_button_next(self, mouse_pos):
         x, y = mouse_pos
-        if 370 <= x <= 400 and 170 <= y <= 200:
+        if 445 <= x <= 475 and 170 <= y <= 200:
             print('next')
             return True
         return False
 
-    def check_button_set(self, mouse_pos):
-        x, y = mouse_pos
-        if 415 <= x <= 445 and 170 <= y <= 200:
-            print('set')
-            return True
-        return False
+    # def check_button_set(self, mouse_pos):
+    #     x, y = mouse_pos
+    #     if 415 <= x <= 445 and 170 <= y <= 200:
+    #         print('set')
+    #         return True
+    #     return False
 
     def on_click(self, cell, qb_number):
         global index, all_tiles
@@ -461,7 +474,6 @@ class TilesSprites(pygame.sprite.Sprite):
 
 
 class TimelineSprite(pygame.sprite.Sprite):
-
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         player_img = pygame.image.load('TimeLine.bmp').convert()
@@ -587,6 +599,9 @@ if __name__ == '__main__':
         # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index].image, all_tiles[index].rect)
         screen.blit(timeline_sprite.image, timeline_sprite.rect)
+        screen.blit(token2.image, timeline_sprite.rect)
+        screen.blit(token1.image, timeline_sprite.rect)
+
         # all_sprites.draw(screen)
 
         pygame.display.flip()
