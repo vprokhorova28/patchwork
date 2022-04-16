@@ -274,6 +274,9 @@ class Player:
         self.timeline_position = 0
         self.token = token
 
+    def __repr__(self):
+        return f'Player {self.token.number}'
+
     def move(self, move_num):
         if self.timeline_position + move_num <= 53:
             self.timeline_position += move_num
@@ -297,13 +300,13 @@ class Player:
 
 
 class TimeLine:
-    def __init__(self, player1, player2):
+    def __init__(self):
         self.num_cells = 54
         self.button_income_coords = [5, 11, 17, 23, 29, 35, 41, 47, 53]
         self.special_patch_coords = [20, 26, 32, 44, 50]
         self.board = [] * 54
-        self.player1 = player1
-        self.player2 = player2
+        # self.player1 = player1
+        # self.player2 = player2
         self.cells_centers = [
             (347, 235), (392, 235), (437, 235), (482, 235), (527, 235), (572, 235), (617, 235),
             (662, 235), (662, 280), (662, 325), (662, 370), (662, 415), (662, 460), (662, 505),
@@ -318,22 +321,24 @@ class TimeLine:
         # а, оказывается, золотую медаль мне портит не русский, не физика, а проект 💕💕💕
 
     def is_game_finished(self):
-        if self.player1.timeline_position == 53 and self.player2.timeline_position == 53:
+        global player1, player2
+        if player1.timeline_position == 53 and player2.timeline_position == 53:
             return True
         return False
 
     @property
     def who_moves(self):
-        if self.player1.timeline_position > self.player2.timeline_position:
-            return self.player1
-        if self.player1.timeline_position < self.player2.timeline_position:
-            return self.player2
+        global player1, player2
+        if player1.timeline_position > player2.timeline_position:
+            return 2
+        if player1.timeline_position < player2.timeline_position:
+            return 1
         else:
             # возвращает первого игрока, добавленного в список определенной клетки поля
             # return self.board[self.player2.timeline_position][-1]
 
             # но здесь какая-то ошибка, так что пусть будет первый игрок
-            return self.player1
+            return 1
 
 
 class Board:
@@ -381,7 +386,7 @@ class Board:
         myText = myFont.render(f'{player2.money} пуговиц', True, WHITE)
         screen.blit(myText, (590, 15))
 
-        myText = myFont.render(f'Ход {timeline.who_moves.token.number}го игрока', True, WHITE)
+        myText = myFont.render(f'Ход {timeline.who_moves}го игрока', True, WHITE)
         screen.blit(myText, (490, 120))
 
     def get_click(self, mouse_pos):
@@ -402,10 +407,12 @@ class Board:
         elif self.btn_B.is_pressed(mouse_pos):
             print('потратить пуговицы и расположить лоскут')
             player = timeline.who_moves
-            player.timeline_position += self.tiles_list[index].placing_time
-            player.token.rect.center = timeline.cells_centers[player.timeline_position]
-            print(timeline.cells_centers[
-                player.timeline_position + self.tiles_list[index].placing_time])
+            if player == 1:
+                player1.move(self.tiles_list[index].placing_time)
+                player1.token.rect.center = timeline.cells_centers[player1.timeline_position]
+            else:
+                player2.move(self.tiles_list[index].placing_time)
+                player2.token.rect.center = timeline.cells_centers[player2.timeline_position]
             self.waiting_for_position()
 
     def check_button_rot(self, mouse_pos):
@@ -537,7 +544,7 @@ if __name__ == '__main__':
     qb1 = QuiltBoard(player1, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=0)
     qb2 = QuiltBoard(player2, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=300)
 
-    timeline = TimeLine(player1, player2)
+    timeline = TimeLine()
 
     board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, [qb1, qb2], btn_A, btn_B, timeline)
 
