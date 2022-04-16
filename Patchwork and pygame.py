@@ -10,6 +10,7 @@ GREEN = (94, 148, 118)
 PURPLE = (74, 55, 97)
 RED = (123, 69, 90)
 WHITE = (255, 255, 255)
+YELLOW = (211, 146, 52)
 
 tile_1 = numpy.array([
     [0, 0, 1],
@@ -93,9 +94,9 @@ class Button:
 
     def draw(self):
         pygame.draw.rect(self.screen, self.color, (self.x, self.y, self.length, self.width))
-        font_size = int(self.length// len(self.text))*2
-        myFont = pygame.font.SysFont("Calibri", font_size)
-        myText = myFont.render(self.text, True, WHITE)
+        font_size = int(self.length// len(self.text))
+        myFont = pygame.font.SysFont("Courier New", font_size)
+        myText = myFont.render(self.text, True, RED)
         self.screen.blit(myText, ((self.x + self.length / 2) - myText.get_width() / 2, (self.y + self.width / 2) - myText.get_height() / 2))
 
     def is_pressed(self, mouse):
@@ -303,12 +304,25 @@ class TimeLine:
         self.board = [] * 54
         self.player1 = player1
         self.player2 = player2
+        self.cells_centers = [
+            (347, 235), (392, 235), (437, 235), (482, 235), (527, 235), (572, 235), (617, 235),
+            (662, 235), (662, 280), (662, 325), (662, 370), (662, 415), (662, 460), (662, 505),
+            (662, 550), (617, 325), (572, 325), (527, 325), (482, 325), (437, 325), (392, 325),
+            (347, 370), (392, 370), (437, 370), (482, 370), (527, 370), (347, 415),
+            (392, 415), (437, 415), (482, 415), (347, 460), (392, 460),
+            (437, 460), (347, 505), (392, 505)
+        ]
+        # аааааа блин, ничего не получается, здесь должны быть координаты центров, но они
+        # тут не все и не правильные, но предположим, что они тут есть, я устала искать ошибки
+        # в циферках, вообще люблю эту жизнь и тех, кто ставит 8 за проекты. Мне вот ЕГЭ сдавать,
+        # а, оказывается, золотую медаль мне портит не русский, не физика, а проект 💕💕💕
 
     def is_game_finished(self):
         if self.player1.timeline_position == 53 and self.player2.timeline_position == 53:
             return True
         return False
 
+    @property
     def who_moves(self):
         if self.player1.timeline_position > self.player2.timeline_position:
             return self.player1
@@ -316,16 +330,14 @@ class TimeLine:
             return self.player2
         else:
             # возвращает первого игрока, добавленного в список определенной клетки поля
-            return self.board[self.player2.timeline_position][-1]
+            # return self.board[self.player2.timeline_position][-1]
 
-
-class TimeToken():
-    def __init__(self):
-        self.pos = 0
+            # но здесь какая-то ошибка, так что пусть будет первый игрок
+            return self.player1
 
 
 class Board:
-    def __init__(self, width, height, tiles_list, qb, btn_place):
+    def __init__(self, width, height, tiles_list, qb, btn_A, btn_B, timeline):
         self.width = width
         self.height = height
         self.left = 20
@@ -335,7 +347,8 @@ class Board:
 
         self.tiles_list = tiles_list  # список из объектов класса Tile
         self.condition = False  # отвечает за то, можно ли ставить тайл
-        self.btn_place = btn_place
+        self.btn_A = btn_A
+        self.btn_B = btn_B
         # хотелось бы, чтобы после того, как мы ставим детальку, больше мы не могли её достать
         # для этого нужно удалить её из списка, но нам всё равно нужен индекс. Проблема: индекс
         # индекс лежит не в классе, менять
@@ -354,6 +367,13 @@ class Board:
         pygame.draw.rect(screen, BLUE, (370, 170, 30, 30))
         # кнопка, при нажатии на которую мы переходи в режим выставления детальки на поле
         pygame.draw.rect(screen, GREEN, (415, 170, 30, 30))
+        # окошки для игроков, у кого сколько пуговиц
+        pygame.draw.rect(screen, (255, 255, 255), (490, 10, 95, 100), 2)
+        pygame.draw.rect(screen, (255, 255, 255), (585, 10, 95, 100), 2)
+
+        myFont = pygame.font.SysFont("Courier New", 18)
+        myText = myFont.render(f'Ход {timeline.who_moves.token.number}го игрока', True, WHITE)
+        screen.blit(myText, (490, 120))
 
     def get_click(self, mouse_pos):
         cell1 = self.quiltboards[0].get_cell(mouse_pos)
@@ -370,9 +390,9 @@ class Board:
             return 'next'
         elif self.check_button_set(mouse_pos):
             self.waiting_for_position()
-        elif self.btn_place.is_pressed(mouse_pos):
+        elif self.btn_A.is_pressed(mouse_pos):
             print('поставить')
-        elif self.btn_advance.os_pressed(mouse_pos):
+        elif self.btn_B.os_pressed(mouse_pos):
             pass
 
     def check_button_rot(self, mouse_pos):
@@ -449,6 +469,19 @@ class TimelineSprite(pygame.sprite.Sprite):
         self.image.set_colorkey((255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.center = (505, 405)
+        self.pos = (347, 245)  # центр первой клетки таймлайна
+
+
+class TimeToken(pygame.sprite.Sprite):
+    '''создаём спрайты для жетонов'''
+    def __init__(self, path, number):
+        pygame.sprite.Sprite.__init__(self)
+        player_img = pygame.image.load(path).convert()
+        self.image = player_img
+        self.number = number
+        self.image.set_colorkey((255, 255, 255))
+        self.rect = self.image.get_rect()
+        self.rect.center = (350, 235 + (number - 1) * 20)
 
 
 # special_patch_code = numpy.array([1])
@@ -477,18 +510,21 @@ if __name__ == '__main__':
     size = width, height = 700, 600
     screen = pygame.display.set_mode(size)
 
-    token1 = TimeToken()
-    token2 = TimeToken()
+    token1 = TimeToken('жетон 1.bmp', 1)
+    token2 = TimeToken('жетон 2.bmp', 2)
 
     player1 = Player(token1)
     player2 = Player(token2)
 
-    btn_place = Button(screen, 500, 60, 100, 40, RED, 'take and place a patch')
+    btn_A = Button(screen, 490, 170, 30, 30, YELLOW, 'A')
+    btn_B = Button(screen, 530, 170, 30, 30, YELLOW, 'B')
 
     qb1 = QuiltBoard(player1, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=0)
     qb2 = QuiltBoard(player2, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=300)
 
-    board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, [qb1, qb2], btn_place)
+    timeline = TimeLine(player1, player2)
+
+    board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, [qb1, qb2], btn_A, btn_B, timeline)
 
     player_received_7x7 = None
     move_number = 0
@@ -499,7 +535,7 @@ if __name__ == '__main__':
     # board_2 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb2, 300)
     # board_2.set_view(10, 10, 30)
 
-    timeline = TimeLine(player1, player2)
+
 
     index = 0
     image_configuration = 0
@@ -511,6 +547,7 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
+                print(event.pos)
                 f1 = board.get_click(event.pos)
                 if f1 == 'next':
                     index += 1
@@ -534,7 +571,8 @@ if __name__ == '__main__':
         screen.fill((0, 0, 0))
 
         board.render()
-        btn_place.draw()
+        btn_A.draw()
+        btn_B.draw()
         if filling_cells:
             for cell in qb1.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
