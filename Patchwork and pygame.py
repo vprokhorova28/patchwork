@@ -279,6 +279,7 @@ class Player:
 
     def move(self, move_num):
         if self.timeline_position + move_num <= 53:
+            print(self.timeline_position, move_num, '!')
             self.timeline_position += move_num
         else:
             self.timeline_position = 53
@@ -406,13 +407,13 @@ class Board:
             print('передвинуться по таймлайну и получить пуговицы')
         elif self.btn_B.is_pressed(mouse_pos):
             print('потратить пуговицы и расположить лоскут')
-            player = timeline.who_moves
-            if player == 1:
-                player1.move(self.tiles_list[index].placing_time)
-                player1.token.rect.center = timeline.cells_centers[player1.timeline_position]
-            else:
-                player2.move(self.tiles_list[index].placing_time)
-                player2.token.rect.center = timeline.cells_centers[player2.timeline_position]
+            # player = timeline.who_moves
+            # if player == 1:
+            #     player1.token.rect.center = timeline.cells_centers[player1.timeline_position]
+            # else:
+            #     position = player2.timeline_position
+            #     x, y = timeline.cells_centers[position]
+            #     player2.token.rect.center = (x, y+20)
             self.waiting_for_position()
 
     def check_button_rot(self, mouse_pos):
@@ -443,8 +444,17 @@ class Board:
         if self.condition:
             # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоард)
             if self.quiltboards[qb_number-1].check_tile(*cell, self.tiles_list[index].all_configurations):
+                player = timeline.who_moves
                 # закрашиваем
                 self.quiltboards[qb_number-1].place_tile(*cell, self.tiles_list[index])
+                # передвигаем жетоны
+                if player == 1:
+                    player1.token.rect.center = timeline.cells_centers[player1.timeline_position]
+                else:
+                    position = player2.timeline_position
+                    x, y = timeline.cells_centers[position]
+                    player2.token.rect.center = (x, y + 20)
+
                 for y in range(len(self.quiltboards[qb_number-1].board_list)):
                     for x in range(len(self.quiltboards[qb_number-1].board_list[y])):
                         if self.quiltboards[qb_number-1].board_list[y][x]:
