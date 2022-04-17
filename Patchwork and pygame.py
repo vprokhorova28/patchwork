@@ -6,8 +6,10 @@ BOARD_WIDTH = 9
 CONFIG_NUM = 4
 
 BLUE = (74, 172, 214)
+BLACK = (0, 0, 0)
+FOREST_GREEN = (2, 86, 69)
 GREEN = (94, 148, 118)
-PURPLE = (74, 55, 97)
+PURPLE = (138, 114, 193)
 RED = (123, 69, 90)
 WHITE = (255, 255, 255)
 YELLOW = (211, 146, 52)
@@ -96,7 +98,7 @@ class Button:
         pygame.draw.rect(self.screen, self.color, (self.x, self.y, self.length, self.width))
         font_size = int(self.length// len(self.text))
         myFont = pygame.font.SysFont("Courier New", font_size)
-        myText = myFont.render(self.text, True, RED)
+        myText = myFont.render(self.text, True, BLACK)
         self.screen.blit(myText, ((self.x + self.length / 2) - myText.get_width() / 2, (self.y + self.width / 2) - myText.get_height() / 2))
 
     def is_pressed(self, mouse):
@@ -528,6 +530,7 @@ if __name__ == '__main__':
     pygame.init()
     size = width, height = 700, 600
     screen = pygame.display.set_mode(size)
+    background_color = BLACK
 
     token1 = TimeToken('жетон 1.bmp', 1)
     token2 = TimeToken('жетон 2.bmp', 2)
@@ -540,6 +543,7 @@ if __name__ == '__main__':
 
     btn_A = Button(screen, 490, 170, 30, 30, YELLOW, 'A')
     btn_B = Button(screen, 530, 170, 30, 30, YELLOW, 'B')
+    btn_theme = Button(screen, 650, 170, 30, 30, WHITE, 'T')
 
     qb1 = QuiltBoard(player1, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=0)
     qb2 = QuiltBoard(player2, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=300)
@@ -558,6 +562,8 @@ if __name__ == '__main__':
     # board_2.set_view(10, 10, 30)
 
     index = 0
+    theme_index = 0
+    theme_colors = [BLACK, FOREST_GREEN]
     image_configuration = 0
 
     filling_cells = False
@@ -573,6 +579,8 @@ if __name__ == '__main__':
                     index += 1
                 if f1 == 'rot':
                     image_configuration += 1
+                if btn_theme.is_pressed(event.pos):
+                    theme_index = (theme_index + 1) % 2
 
         image_configuration %= CONFIG_NUM
 
@@ -587,11 +595,12 @@ if __name__ == '__main__':
         if len(all_tiles) != 0:
             index %= len(all_tiles)
 
-        screen.fill((0, 0, 0))
+        screen.fill(theme_colors[theme_index])
 
         board.render()
         btn_A.draw()
         btn_B.draw()
+        btn_theme.draw()
         if filling_cells:
             for cell in qb1.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
