@@ -249,7 +249,10 @@ class QuiltBoard():
 
         if nearest_button_position:
             if self.player.is_money_increased(nearest_btn=nearest_button_position):
-                self.player.add_money()
+                # self.player.add_money()
+                # add_money() missing 1 required positional argument: 'value',
+                # а где его взять не знаю
+                pass
 
         if nearest_patch_position:
             if self.player.has_new_special_patches(nearest_patch=nearest_patch_position):
@@ -407,13 +410,6 @@ class Board:
             print('передвинуться по таймлайну и получить пуговицы')
         elif self.btn_B.is_pressed(mouse_pos):
             print('потратить пуговицы и расположить лоскут')
-            # player = timeline.who_moves
-            # if player == 1:
-            #     player1.token.rect.center = timeline.cells_centers[player1.timeline_position]
-            # else:
-            #     position = player2.timeline_position
-            #     x, y = timeline.cells_centers[position]
-            #     player2.token.rect.center = (x, y+20)
             self.waiting_for_position()
 
     def check_button_rot(self, mouse_pos):
@@ -430,12 +426,6 @@ class Board:
             return True
         return False
 
-    # def check_button_set(self, mouse_pos):
-    #     x, y = mouse_pos
-    #     if 415 <= x <= 445 and 170 <= y <= 200:
-    #         print('set')
-    #         return True
-    #     return False
 
     def on_click(self, cell, qb_number):
         global index, all_tiles
@@ -591,7 +581,6 @@ if __name__ == '__main__':
         all_sprites = pygame.sprite.Group()
         all_tiles = []
         for tile in tiles_list:
-            # all_sprites.add(TilesSprites(tile.basic_configuration, tile.images[0]))
             all_tiles.append(
                 TilesSprites(tile.all_configurations[image_configuration], tile.images[image_configuration]))
 
@@ -614,14 +603,9 @@ if __name__ == '__main__':
                 for x in range(7):
                     pygame.draw.rect(screen, PURPLE,
                                      (11 + (x + bonus_x) * 30, 11 + (y + bonus_y) * 30, 28, 28))
-        # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index].image, all_tiles[index].rect)
         screen.blit(timeline_sprite.image, timeline_sprite.rect)
-        # screen.blit(token2.image, timeline_sprite.rect)
-        # screen.blit(token1.image, timeline_sprite.rect)
         tokens_sprites_list.draw(screen)
-
-        # all_sprites.draw(screen)
 
         pygame.display.flip()
     pygame.quit()
