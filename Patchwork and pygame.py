@@ -6,10 +6,13 @@ BOARD_WIDTH = 9
 CONFIG_NUM = 4
 
 BLUE = (74, 172, 214)
+BLACK = (0, 0, 0)
+FOREST_GREEN = (2, 86, 69)
 GREEN = (94, 148, 118)
-PURPLE = (74, 55, 97)
+PURPLE = (138, 114, 193)
 RED = (123, 69, 90)
 WHITE = (255, 255, 255)
+YELLOW = (211, 146, 52)
 
 tile_1 = numpy.array([
     [0, 0, 1],
@@ -93,9 +96,9 @@ class Button:
 
     def draw(self):
         pygame.draw.rect(self.screen, self.color, (self.x, self.y, self.length, self.width))
-        font_size = int(self.length// len(self.text))*2
-        myFont = pygame.font.SysFont("Calibri", font_size)
-        myText = myFont.render(self.text, True, WHITE)
+        font_size = int(self.length// len(self.text))
+        myFont = pygame.font.SysFont("Courier New", font_size)
+        myText = myFont.render(self.text, True, BLACK)
         self.screen.blit(myText, ((self.x + self.length / 2) - myText.get_width() / 2, (self.y + self.width / 2) - myText.get_height() / 2))
 
     def is_pressed(self, mouse):
@@ -248,7 +251,10 @@ class QuiltBoard():
 
         if nearest_button_position:
             if self.player.is_money_increased(nearest_btn=nearest_button_position):
-                self.player.add_money()
+                # self.player.add_money()
+                # add_money() missing 1 required positional argument: 'value',
+                # а где его взять не знаю
+                pass
 
         if nearest_patch_position:
             if self.player.has_new_special_patches(nearest_patch=nearest_patch_position):
@@ -273,8 +279,12 @@ class Player:
         self.timeline_position = 0
         self.token = token
 
+    def __repr__(self):
+        return f'Player {self.token.number}'
+
     def move(self, move_num):
         if self.timeline_position + move_num <= 53:
+            print(self.timeline_position, move_num, '!')
             self.timeline_position += move_num
         else:
             self.timeline_position = 53
@@ -296,36 +306,49 @@ class Player:
 
 
 class TimeLine:
-    def __init__(self, player1, player2):
+    def __init__(self):
         self.num_cells = 54
         self.button_income_coords = [5, 11, 17, 23, 29, 35, 41, 47, 53]
         self.special_patch_coords = [20, 26, 32, 44, 50]
         self.board = [] * 54
-        self.player1 = player1
-        self.player2 = player2
+        # self.player1 = player1
+        # self.player2 = player2
+        self.cells_centers = [
+            (347, 235), (392, 235), (437, 235), (482, 235), (527, 235), (572, 235), (617, 235),
+            (662, 235), (662, 280), (662, 325), (662, 370), (662, 415), (662, 460), (662, 505),
+            (662, 550), (617, 325), (572, 325), (527, 325), (482, 325), (437, 325), (392, 325),
+            (347, 370), (392, 370), (437, 370), (482, 370), (527, 370), (347, 415),
+            (392, 415), (437, 415), (482, 415), (347, 460), (392, 460),
+            (437, 460), (347, 505), (392, 505)
+        ]
+        # аааааа блин, ничего не получается, здесь должны быть координаты центров, но они
+        # тут не все и не правильные, но предположим, что они тут есть, я устала искать ошибки
+        # в циферках, вообще люблю эту жизнь и тех, кто ставит 8 за проекты. Мне вот ЕГЭ сдавать,
+        # а, оказывается, золотую медаль мне портит не русский, не физика, а проект 💕💕💕
 
     def is_game_finished(self):
-        if self.player1.timeline_position == 53 and self.player2.timeline_position == 53:
+        global player1, player2
+        if player1.timeline_position == 53 and player2.timeline_position == 53:
             return True
         return False
 
+    @property
     def who_moves(self):
-        if self.player1.timeline_position > self.player2.timeline_position:
-            return self.player1
-        if self.player1.timeline_position < self.player2.timeline_position:
-            return self.player2
+        global player1, player2
+        if player1.timeline_position > player2.timeline_position:
+            return 2
+        if player1.timeline_position < player2.timeline_position:
+            return 1
         else:
             # возвращает первого игрока, добавленного в список определенной клетки поля
-            return self.board[self.player2.timeline_position][-1]
+            # return self.board[self.player2.timeline_position][-1]
 
-
-class TimeToken():
-    def __init__(self):
-        self.pos = 0
+            # но здесь какая-то ошибка, так что пусть будет первый игрок
+            return 1
 
 
 class Board:
-    def __init__(self, width, height, tiles_list, qb, btn_place):
+    def __init__(self, width, height, tiles_list, qb, btn_A, btn_B, timeline):
         self.width = width
         self.height = height
         self.left = 20
@@ -335,13 +358,15 @@ class Board:
 
         self.tiles_list = tiles_list  # список из объектов класса Tile
         self.condition = False  # отвечает за то, можно ли ставить тайл
-        self.btn_place = btn_place
+        self.btn_A = btn_A
+        self.btn_B = btn_B
         # хотелось бы, чтобы после того, как мы ставим детальку, больше мы не могли её достать
         # для этого нужно удалить её из списка, но нам всё равно нужен индекс. Проблема: индекс
         # индекс лежит не в классе, менять
         self.dif_index = 0
 
     def render(self):
+        global index, player1, player2
         for qb in self.quiltboards:
             qb.render()
 
@@ -351,9 +376,24 @@ class Board:
         # нет, блин, кола
         pygame.draw.rect(screen, PURPLE, (325, 170, 30, 30))
         # которая поворачивает детальку
-        pygame.draw.rect(screen, BLUE, (370, 170, 30, 30))
-        # кнопка, при нажатии на которую мы переходи в режим выставления детальки на поле
-        pygame.draw.rect(screen, GREEN, (415, 170, 30, 30))
+        pygame.draw.rect(screen, BLUE, (445, 170, 30, 30))
+        # окно с данными лоскутка
+        pygame.draw.rect(screen, WHITE, (360, 170, 80, 30), 2)
+        myFont = pygame.font.SysFont("Courier New", 14, bold=True)
+        myText = myFont.render(
+            f'П:{self.tiles_list[index].placing_price} В:{self.tiles_list[index].placing_time}',
+            True, WHITE)
+        screen.blit(myText, (365, 175))
+        # окошки для игроков, у кого сколько пуговиц
+        pygame.draw.rect(screen, (255, 255, 255), (490, 10, 95, 100), 2)
+        myText = myFont.render(f'{player1.money} пуговиц', True, WHITE)
+        screen.blit(myText, (495, 15))
+        pygame.draw.rect(screen, (255, 255, 255), (585, 10, 95, 100), 2)
+        myText = myFont.render(f'{player2.money} пуговиц', True, WHITE)
+        screen.blit(myText, (590, 15))
+
+        myText = myFont.render(f'Ход {timeline.who_moves}го игрока', True, WHITE)
+        screen.blit(myText, (490, 120))
 
     def get_click(self, mouse_pos):
         cell1 = self.quiltboards[0].get_cell(mouse_pos)
@@ -368,12 +408,11 @@ class Board:
         elif self.check_button_next(mouse_pos):
             self.do_next()
             return 'next'
-        elif self.check_button_set(mouse_pos):
+        elif self.btn_A.is_pressed(mouse_pos):
+            print('передвинуться по таймлайну и получить пуговицы')
+        elif self.btn_B.is_pressed(mouse_pos):
+            print('потратить пуговицы и расположить лоскут')
             self.waiting_for_position()
-        elif self.btn_place.is_pressed(mouse_pos):
-            print('поставить')
-        elif self.btn_advance.os_pressed(mouse_pos):
-            pass
 
     def check_button_rot(self, mouse_pos):
         x, y = mouse_pos
@@ -384,17 +423,11 @@ class Board:
 
     def check_button_next(self, mouse_pos):
         x, y = mouse_pos
-        if 370 <= x <= 400 and 170 <= y <= 200:
+        if 445 <= x <= 475 and 170 <= y <= 200:
             print('next')
             return True
         return False
 
-    def check_button_set(self, mouse_pos):
-        x, y = mouse_pos
-        if 415 <= x <= 445 and 170 <= y <= 200:
-            print('set')
-            return True
-        return False
 
     def on_click(self, cell, qb_number):
         global index, all_tiles
@@ -403,8 +436,17 @@ class Board:
         if self.condition:
             # если мы можем поставить тайл (проверяем при помощи метода класса квилтбоард)
             if self.quiltboards[qb_number-1].check_tile(*cell, self.tiles_list[index].all_configurations):
+                player = timeline.who_moves
                 # закрашиваем
                 self.quiltboards[qb_number-1].place_tile(*cell, self.tiles_list[index])
+                # передвигаем жетоны
+                if player == 1:
+                    player1.token.rect.center = timeline.cells_centers[player1.timeline_position]
+                else:
+                    position = player2.timeline_position
+                    x, y = timeline.cells_centers[position]
+                    player2.token.rect.center = (x, y + 20)
+
                 for y in range(len(self.quiltboards[qb_number-1].board_list)):
                     for x in range(len(self.quiltboards[qb_number-1].board_list[y])):
                         if self.quiltboards[qb_number-1].board_list[y][x]:
@@ -441,7 +483,6 @@ class TilesSprites(pygame.sprite.Sprite):
 
 
 class TimelineSprite(pygame.sprite.Sprite):
-
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
         player_img = pygame.image.load('TimeLine.bmp').convert()
@@ -449,6 +490,19 @@ class TimelineSprite(pygame.sprite.Sprite):
         self.image.set_colorkey((255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.center = (505, 405)
+        self.pos = (347, 245)  # центр первой клетки таймлайна
+
+
+class TimeToken(pygame.sprite.Sprite):
+    '''создаём спрайты для жетонов'''
+    def __init__(self, path, number):
+        pygame.sprite.Sprite.__init__(self)
+        player_img = pygame.image.load(path).convert()
+        self.image = player_img
+        self.number = number
+        self.image.set_colorkey((255, 255, 255))
+        self.rect = self.image.get_rect()
+        self.rect.center = (350, 235 + (number - 1) * 20)
 
 
 # special_patch_code = numpy.array([1])
@@ -476,19 +530,27 @@ if __name__ == '__main__':
     pygame.init()
     size = width, height = 700, 600
     screen = pygame.display.set_mode(size)
+    background_color = BLACK
 
-    token1 = TimeToken()
-    token2 = TimeToken()
+    token1 = TimeToken('жетон 1.bmp', 1)
+    token2 = TimeToken('жетон 2.bmp', 2)
+    tokens_sprites_list = pygame.sprite.Group()
+    tokens_sprites_list.add(token1)
+    tokens_sprites_list.add(token2)
 
     player1 = Player(token1)
     player2 = Player(token2)
 
-    btn_place = Button(screen, 500, 60, 100, 40, RED, 'take and place a patch')
+    btn_A = Button(screen, 490, 170, 30, 30, YELLOW, 'A')
+    btn_B = Button(screen, 530, 170, 30, 30, YELLOW, 'B')
+    btn_theme = Button(screen, 650, 170, 30, 30, WHITE, 'T')
 
     qb1 = QuiltBoard(player1, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=0)
     qb2 = QuiltBoard(player2, width=BOARD_WIDTH, height=BOARD_HEIGHT, left=10, top=10, cell_size=30, dif=300)
 
-    board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, [qb1, qb2], btn_place)
+    timeline = TimeLine()
+
+    board = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, [qb1, qb2], btn_A, btn_B, timeline)
 
     player_received_7x7 = None
     move_number = 0
@@ -499,9 +561,9 @@ if __name__ == '__main__':
     # board_2 = Board(BOARD_HEIGHT, BOARD_WIDTH, tiles_list, qb2, 300)
     # board_2.set_view(10, 10, 30)
 
-    timeline = TimeLine(player1, player2)
-
     index = 0
+    theme_index = 0
+    theme_colors = [BLACK, FOREST_GREEN]
     image_configuration = 0
 
     filling_cells = False
@@ -511,11 +573,14 @@ if __name__ == '__main__':
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
+                print(event.pos)
                 f1 = board.get_click(event.pos)
                 if f1 == 'next':
                     index += 1
                 if f1 == 'rot':
                     image_configuration += 1
+                if btn_theme.is_pressed(event.pos):
+                    theme_index = (theme_index + 1) % 2
 
         image_configuration %= CONFIG_NUM
 
@@ -524,17 +589,18 @@ if __name__ == '__main__':
         all_sprites = pygame.sprite.Group()
         all_tiles = []
         for tile in tiles_list:
-            # all_sprites.add(TilesSprites(tile.basic_configuration, tile.images[0]))
             all_tiles.append(
                 TilesSprites(tile.all_configurations[image_configuration], tile.images[image_configuration]))
 
         if len(all_tiles) != 0:
             index %= len(all_tiles)
 
-        screen.fill((0, 0, 0))
+        screen.fill(theme_colors[theme_index])
 
         board.render()
-        btn_place.draw()
+        btn_A.draw()
+        btn_B.draw()
+        btn_theme.draw()
         if filling_cells:
             for cell in qb1.filled_cells:
                 pygame.draw.rect(screen, GREEN, cell)
@@ -546,10 +612,9 @@ if __name__ == '__main__':
                 for x in range(7):
                     pygame.draw.rect(screen, PURPLE,
                                      (11 + (x + bonus_x) * 30, 11 + (y + bonus_y) * 30, 28, 28))
-        # нужно отрисовывать один тайл, а не все сразу
         screen.blit(all_tiles[index].image, all_tiles[index].rect)
         screen.blit(timeline_sprite.image, timeline_sprite.rect)
-        # all_sprites.draw(screen)
+        tokens_sprites_list.draw(screen)
 
         pygame.display.flip()
     pygame.quit()
